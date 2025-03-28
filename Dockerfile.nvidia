@@ -1,0 +1,32 @@
+FROM nvidia/cuda:12.4.1-devel-ubuntu22.04
+
+# Install Python 3.11 and required tools
+RUN apt-get update && apt-get install -y \
+    python3.11 python3.11-dev python3-pip git ninja-build vim curl wget build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Update alternatives to make Python 3.11 the default 'python3'
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
+    && update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1
+
+# Ensure pip is linked to Python 3.11
+RUN python3 -m pip install --upgrade pip setuptools wheel
+
+# Create app directory
+RUN mkdir -p /app
+WORKDIR /app
+ADD . .
+
+# Set up environment variables for CUDA
+ENV PATH="/usr/local/cuda/bin:${PATH}"
+ENV CUDA_HOME="/usr/local/cuda"
+
+# Ensure `nvcc` is installed
+RUN nvcc --version
+
+# Run setup.sh to install dependencies (including flash-attn)
+RUN chmod +x setup.sh
+RUN ./setup.sh
+RUN pip install -r src/requirements.txt
+
+CMD ["sleep", "infinity"]
